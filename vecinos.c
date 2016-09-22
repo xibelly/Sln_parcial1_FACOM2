@@ -70,7 +70,7 @@ struct particle *part;
 
 int main(int argc, char **argv) 
 {
-  int  i, j, nread, c, id_i, id_j;
+  int  i, j, nread, c , d, *id_i, *id_j, n;
   int suma;
   double a, b;
 
@@ -81,7 +81,8 @@ int main(int argc, char **argv)
   double X_centro, Y_centro;
   double r_xi, r_yi, r_xj, r_yj;
   double xi, yi, xj, yj;
-  double R;
+  double *pos_x, *pos_y;
+  double *R;
   
 
   printf("%d\n",argc);
@@ -101,10 +102,20 @@ int main(int argc, char **argv)
 
   printf("%s %d %s\n",argv[0], Nparticles, filename);
 
-  
+  n = Nparticles * Nparticles;
   
   dist = (double *) malloc(Nparticles *sizeof(double));  //particulas
 
+  pos_x = (double *) malloc( n *sizeof(double));  //particulas
+
+  pos_y = (double *) malloc( n *sizeof(double));
+
+  R    = (double *) malloc( n *sizeof(double));
+
+  id_i = (int *) malloc( n *sizeof(int));
+
+  id_j = (int *) malloc( n *sizeof(int));
+  
   part = (struct particle *) malloc(Nparticles *sizeof(struct particle));
 
   //part.id = (int *) malloc(Nparticles *sizeof(int));
@@ -172,36 +183,25 @@ int main(int argc, char **argv)
 	    //fprintf(pf3,"%d %d %lf %lf %lf\n", part[i].id, part[p[j]].id, part[p[j]].pos[0], part[p[j]].pos[1], dist[p[j]]);
 	  }
     }
-  fclose(pf3);
+  //fclose(pf3);
   
   pf4 = fopen("vecinos.dat","r");
 
-  for(i=0; i<Nparticles*Nparticles; i++)
+  for(i=0; i<n; i++)
     {
-      nread = fscanf(pf4,"%d %d %lf %lf %lf", &id_i, &id_j, &part[i].x, &part[i].y, &R);
+      nread = fscanf(pf4,"%d %d %lf %lf %lf", &id_i[i], &id_j[i], &pos_x[i], &pos_y[i], &R[i]);
 
-      c = i+Nparticles;
+      c = i; //+Nparticles;
+      d = c +1;
       while(c)
 	{
-	  printf("PARTICLE %d HAS 1 TRIANGLES\n",part[i].id);
-	  printf("WITH COORDINATES: \n");  
-	  printf("%lf %lf\n",part[c].x, part[c].y);
-	}
+	  printf("PARTICLE %d HAS 1 TRIANGLES\n",id_i[i]);
+	  printf("THEIR TOW NEIGHBORS ARE: \n");  
+	  printf("%lf %lf %lf %lf\n",pos_x[c], pos_y[c], pos_x[d], pos_y[d]);
+	  }
     }
   
-  /*for(i=0; i<Nparticles*; i++) //dos vecinos mas cercanos
-    {
-      for(j=0; j<Nparticles; j++)
-	  {
-	    //c =1* (j * Nparticles);
-	    printf("%d\n",c);
-	    printf("PARTICLE %d HAS 1 TRIANGLES\n",part[i].id);
-	    printf("WITH COORDINATES: \n");  
-	    printf("%lf %lf\n",part[p[j]].pos[0], part[p[j]].pos[1]);
-          }
-	
-	  }*/
-  
+    
   free(dist);
     
   exit(0);
