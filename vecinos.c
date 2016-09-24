@@ -30,8 +30,11 @@ Nbox = 25
 #include <gsl/gsl_sort_int.h>
 #include <gsl/gsl_sort_double.h>
 
-
 #include <distancia.h>
+
+#define m 1
+#define PI 3.141592
+
 
 //////VARIABLE GLOBALES//////
 
@@ -39,14 +42,16 @@ clock_t tini, tend, tacum;
 double cpu_time_used;
 
 int Nparticles;
-double *dist;
-
-///////intento
-
+double *dist, *dist_centro;
+double X_centro, Y_centro;
 
 FILE *pf2=NULL;
 FILE *pf3=NULL;
 FILE *pf4=NULL;
+FILE *pf5=NULL;
+FILE *pf6=NULL;
+FILE *pf7=NULL;
+FILE *pf8=NULL;
 
 struct particle   
 {
@@ -57,8 +62,15 @@ struct particle
 }; 
 struct particle *part; 
 
+struct vecinos
+{
+  int *id_i, *id_j;
+  double *pos_x, *pos_y;
+  double *R;
+  double *XX, *YY;
+}; 
+struct vecinos vec; 
 
-////////////////////////////////////
 
 ///////////LLAMADOS A fUNCIONES///////////
 
@@ -70,27 +82,33 @@ struct particle *part;
 
 int main(int argc, char **argv) 
 {
-  int  i, j, nread, c , d, *id_i, *id_j, n;
+  int  i, j, l, nread, n, tamano, *ID;
   int suma;
-  double a, b;
-
-  
+  int Nbins;
+  int part_bines;
+    
   char *filename;
 
   double distmin, distmax;
-  double X_centro, Y_centro;
   double r_xi, r_yi, r_xj, r_yj;
   double xi, yi, xj, yj;
-  double *pos_x, *pos_y;
-  double *R;
-  
+  double Xi, Yi, Xj, Yj;
+  double x1, y1, x2, y2, x3, y3; 
 
+  double *BX, *BY;
+
+  double Rmax, Rmin;
+  double dr;
+  double ri, re, ri_exp, re_exp, r_medio;
+  double dS, dSi, dSe;
+  double particula, dM;
+  
   printf("%d\n",argc);
 
-  if(argc != 3)
+  if(argc != 4)
     {
       printf("ERROR--> use as:\n");
-      printf("%s Npartilces datafile\n",argv[0]);
+      printf("%s Npartilces part_bines datafile\n",argv[0]);
       exit(0);  
     }
 
@@ -98,43 +116,57 @@ int main(int argc, char **argv)
 
   Nparticles = atoi(argv[1]);
   
-  filename   = argv[2];
+  part_bines   =  atoi(argv[2]);
 
-  printf("%s %d %s\n",argv[0], Nparticles, filename);
+  filename   = argv[3];
 
-  n = Nparticles * Nparticles;
+  printf("%s %d %d %s\n",argv[0], Nparticles, part_bines, filename);
+
+  n     = Nparticles * Nparticles;
   
-  dist = (double *) malloc(Nparticles *sizeof(double));  //particulas
-
-  pos_x = (double *) malloc( n *sizeof(double));  //particulas
-
-  pos_y = (double *) malloc( n *sizeof(double));
-
-  R    = (double *) malloc( n *sizeof(double));
-
-  id_i = (int *) malloc( n *sizeof(int));
-
-  id_j = (int *) malloc( n *sizeof(int));
+  tamano = Nparticles-1;
   
-  part = (struct particle *) malloc(Nparticles *sizeof(struct particle));
+  dist  = (double *) malloc(Nparticles *sizeof(double));  //particulas
+ 
+  ID  = (int *) malloc(Nparticles *sizeof(int));  
 
-  //part.id = (int *) malloc(Nparticles *sizeof(int));
+  part  = (struct particle *) malloc(Nparticles *sizeof(struct particle));
+
+  vec.pos_x = (double *) malloc( n *sizeof(double));  //vecinos
+
+  vec.pos_y = (double *) malloc( n *sizeof(double));
   
+  vec.R    = (double *) malloc( n *sizeof(double));
+
+  vec.id_i = (int *) malloc( n *sizeof(int));
+
+  vec.id_j = (int *) malloc( n *sizeof(int));
+  
+  vec.XX = (double *) malloc( n *sizeof(double));
+
+  vec.YY = (double *) malloc( n *sizeof(double));
+  
+  BX   = (double *) malloc(n* sizeof(double));//triangulos
+
+  BY   = (double *) malloc(n *sizeof(double));
+   
 
   size_t p[Nparticles];
 
   int k = Nparticles;
 
+    
   
   /*Carga de datos*/
   
   read_file(filename, Nparticles);
 
-  //pf2 = fopen("coordenadas2.dat","w");
+  pf2 = fopen("coordenadas2.dat","w");
 
   for(i=0; i<Nparticles; i++)//lectura
     {
-      //fprintf(pf2,"%lf %lf\n",part[i].pos[0], part[i].pos[1]);
+      part[i].id = i;
+      fprintf(pf2,"%d %lf %lf\n",part[i].id, part[i].pos[0], part[i].pos[1]);
     }
 
   
@@ -156,10 +188,12 @@ int main(int argc, char **argv)
 		r_yj = part[j].pos[1];
 
 		dist[j] = distancia(r_xi, r_xj, r_yi, r_yj);
+		//dist[j] = sqrt( ((r_xi - r_xj)*(r_xi - r_xj)) + ((r_yi - r_yj)*(r_yi - r_yj)) );
+		//printf("%lf\n", dist[j]);
 
 	      }
 	    part[i].id = i;
-
+	    
 	  }
 	
     }
@@ -172,43 +206,47 @@ int main(int argc, char **argv)
   
   gsl_sort_smallest_index (p, k, dist, 1, Nparticles);//Se ordenan las particulas en forma creciente
 
-  
-  //pf3 = fopen("vecinos.dat","w");
+ 
+  pf3 = fopen("vecinos.dat","w");
   
   for(i=0; i<Nparticles; i++)
     {
       for(j=0; j<Nparticles; j++)
 	  {
+	    if(j != i)
+	      {
+		fprintf(pf3,"%d %lf %lf %d %lf %lf %lf\n", part[i].id, part[i].pos[0], part[i].pos[1], part[p[j]].id, part[p[j]].pos[0], part[p[j]].pos[1], dist[p[j]]);
 
-	    //fprintf(pf3,"%d %d %lf %lf %lf\n", part[i].id, part[p[j]].id, part[p[j]].pos[0], part[p[j]].pos[1], dist[p[j]]);
+	      }
 	  }
     }
-  //fclose(pf3);
+  fclose(pf3);
   
   pf4 = fopen("vecinos.dat","r");
 
   for(i=0; i<n; i++)
     {
-      nread = fscanf(pf4,"%d %d %lf %lf %lf", &id_i[i], &id_j[i], &pos_x[i], &pos_y[i], &R[i]);
-
-      c = i; //+Nparticles;
-      d = c +1;
-      while(c)
-	{
-	  printf("PARTICLE %d HAS 1 TRIANGLES\n",id_i[i]);
-	  printf("THEIR TOW NEIGHBORS ARE: \n");  
-	  printf("%lf %lf %lf %lf\n",pos_x[c], pos_y[c], pos_x[d], pos_y[d]);
-	  }
+      nread = fscanf(pf4,"%d %lf %lf %d %lf %lf %lf", &vec.id_i[i], &vec.XX[i], &vec.YY[i],&vec.id_j[i], &vec.pos_x[i], &vec.pos_y[i], &vec.R[i]);
     }
   
-    
-  free(dist);
-    
-  exit(0);
-  
-  /*Distancia  al centro del sistema */
+  pf5 = fopen("2vecinos_mas_cercanos.dat","a");
 
+  for(i=0; i<n; i=i+Nparticles)//dos vecinos mas cercanos
+    {
+      fprintf(pf5,"PARTICLE %d HAS 1 TRIANGLE\n",vec.id_i[i]);
+      fprintf(pf5,"THEIR TOW NEIGHBORS ARE: %d  %d\n", vec.id_j[i], vec.id_j[i+1]);  
+      fprintf(pf5,"WITH COORDINATES:\n");
+      fprintf(pf5,"x: %lf y: %lf x: %lf y: %lf\n",vec.pos_x[i], vec.pos_y[i], vec.pos_x[i+1], vec.pos_y[i+1]);
+      
+
+    }
+    
+  //free(dist);
+    
+   
+  /*Distancia  al centro del sistema */
   
+    
   for(i=0; i<Nparticles; i++)
     {
       dist[i] = distancia(1500, part[i].pos[0], 1500, part[i].pos[1]);
@@ -232,7 +270,7 @@ int main(int argc, char **argv)
   
   /*Trasladamos el sistema al centro (0,0)*/
 
-  dist = (double *) malloc(Nparticles *sizeof(double));
+  dist_centro = (double *) malloc(Nparticles *sizeof(double));
 
   distmin = 100*Nparticles;
 
@@ -246,33 +284,120 @@ int main(int argc, char **argv)
       xj =  part[i].pos[0] - X_centro;
       yj =  part[i].pos[1] - Y_centro;
       
-      dist[i] = distancia(xi, xj, yi, yj); //distancia de las particulas al nuevo centro
+      dist_centro[i] = distancia(xi, xj, yi, yj); //distancia de las particulas al nuevo centro
       
-      if(distmin>dist[i])//se calcula la distancia min y max
+      if(distmin>dist_centro[i])//se calcula la distancia min y max
 	{
-	  distmin=dist[i];
+	  distmin=dist_centro[i];
 	}
       
       
-      if(dist[i]>distmax)
+      if(dist_centro[i]>distmax)
 	{
-	  distmax=dist[i];
+	  distmax=dist_centro[i];
 	}
-
-      //write_file("distancia_centro.dat", Nparticles, part, dist);
     }
   printf("MIN VALUE OF DIST %.9lf\n",distmin);
   printf("MAX VALUE OF DIST: %.9lf\n",distmax);
- 
+
+  free(dist); 
+
   
+  /*Calculamos las distancias de los baricentros de cada triangulo al centro (0,0)*/
   
+  dist = (double *) malloc(n *sizeof(double));
+
+  pf6 = fopen("baricentros.dat","w");
+  pf7 = fopen("triangulos-centro.dat","w");
+  
+
+  for(i=0; i<n; i++)//calculo del baricentro
+    {
+      x1 = vec.XX[i]; //coordenadas particula principal
+      y1 = vec.YY[i];
+
+      x2 = vec.pos_x[i];//coordenadas vecinas que forman el triangulo
+      y2 = vec.pos_y[i];
+      
+      x3 = vec.pos_x[i+1];
+      y3 = vec.pos_y[i+1];
+      
+      BX[i] = (x1 + x2 + x3)*0.3; //coordenadas baricentros
+      
+      BY[i] = (y1 + y2 + y3)*0.3;
+
+      fprintf(pf6,"%lf %lf\n", BX[i], BY[i]);
+	  
+
+    }
+
+  for(j=0; j<n; j++)//distancia baricentros al centro del sistema
+    {
+      Xi = X_centro - X_centro;
+      Yi = Y_centro - Y_centro;
+
+      Xj = BX[j] - X_centro;
+      Yj = BY[j] - Y_centro;
+
+       
+      dist[j] = distancia(Xi, Xj, Yi, Yj); //distancia de las particulas al nuevo centro
+      
+      fprintf(pf7,"%d %lf\n",j, dist[j]);
+	
+      }
+
+  /*Densidad superficial de masa -BINEO- */
+
+  Rmax = distmax;
+  Rmin = 0.01*Rmax;
+  Nbins = 1*sqrt(Nparticles);  
+  dr = part_bines * ( log(Rmax)-log(Rmin) )/Nbins;
+
+  pf8 = fopen("densidad_distancia.dat","w");
+  
+  for(l=0; l<Nbins; l++)
+    {
+      ri =log(Rmin)+ l * dr ; 
+      re = ri + dr ;
+               
+      ri_exp = exp(ri);
+      re_exp = exp(re);
+
+      r_medio = (re_exp - ri_exp)*0.5;
+
+      dSi = (2*PI*ri_exp); 
+      dSe = (2*PI*re_exp);
+      
+      dS = dSe - dSi;
+      
+      particula = 0.0;
+      for(i=0; i<Nparticles; i++)
+	{
+	  if(dist_centro[i] >= ri_exp && dist_centro[i] <= re_exp)
+	    {
+	      particula++;
+	      dM = particula*m;
+	    }
+
+	}
+      
+
+      dS = dM/dS;
+
+      fprintf(pf8,"%e %e\n",r_medio, dS);
+
+    }
   
   
   /* Imprimir resultados y salir */
-
-
-  //fclose(pf2);
   
+
+  fclose(pf2);
+  fclose(pf4);
+  fclose(pf5);
+  fclose(pf6);
+  fclose(pf7);
+  fclose(pf8);
   return 0;
 
 }

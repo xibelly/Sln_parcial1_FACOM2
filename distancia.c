@@ -5,7 +5,7 @@ Este programa se usa para calcular la distancia entre particulas
  */
 #include<math.h>
 
-double distancia(double xi, double yi, double xj, double yj)
+double distancia(double xi, double xj, double yi, double yj)
 {
 
   double dist, dx, dy;
@@ -15,7 +15,7 @@ double distancia(double xi, double yi, double xj, double yj)
   
   
   dist = sqrt(dx + dy); 
-  
+  printf("%lf\n", dist);
   return dist;
 
 }
