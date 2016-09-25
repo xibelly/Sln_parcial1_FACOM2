@@ -15,7 +15,7 @@ double distancia(double xi, double xj, double yi, double yj)
   
   
   dist = sqrt(dx + dy); 
-  printf("%lf\n", dist);
+
   return dist;
 
 }

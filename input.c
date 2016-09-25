@@ -15,9 +15,9 @@ int read_file(char *filename, int Nparticles)
     {
       nread = fscanf(pf,"%lf %lf",&X, &Y);
 
-      part[i].pos[0] = X + 1500; //re-escalamos el sistema
+      part[i].pos[0] = X ; 
 
-      part[i].pos[1] = Y + 1500;
+      part[i].pos[1] = Y ;
       
     }
 

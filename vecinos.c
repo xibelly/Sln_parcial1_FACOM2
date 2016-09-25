@@ -31,6 +31,8 @@ Nbox = 25
 #include <gsl/gsl_sort_double.h>
 
 #include <distancia.h>
+#include <simpson.h>
+#include <decae_densidad.h>
 
 #define m 1
 #define PI 3.141592
@@ -76,7 +78,6 @@ struct vecinos vec;
 
 #include"input.c"
 
-#include"output.c"
 
 //////////////////////////////////
 
@@ -99,9 +100,9 @@ int main(int argc, char **argv)
 
   double Rmax, Rmin;
   double dr;
-  double ri, re, ri_exp, re_exp, r_medio;
+  double ri, re, ri_exp, re_exp, *r_medio;
   double dS, dSi, dSe;
-  double particula, dM;
+  double particula, dM, *drho;
   
   printf("%d\n",argc);
 
@@ -129,6 +130,9 @@ int main(int argc, char **argv)
   dist  = (double *) malloc(Nparticles *sizeof(double));  //particulas
  
   ID  = (int *) malloc(Nparticles *sizeof(int));  
+
+  //drho  = (double *) malloc(Nparticles *sizeof(double));
+
 
   part  = (struct particle *) malloc(Nparticles *sizeof(struct particle));
 
@@ -161,13 +165,13 @@ int main(int argc, char **argv)
   
   read_file(filename, Nparticles);
 
-  pf2 = fopen("coordenadas2.dat","w");
+  //pf2 = fopen("coordenadas2.dat","w");
 
-  for(i=0; i<Nparticles; i++)//lectura
+  /*for(i=0; i<Nparticles; i++)//lectura
     {
       part[i].id = i;
-      fprintf(pf2,"%d %lf %lf\n",part[i].id, part[i].pos[0], part[i].pos[1]);
-    }
+      //fprintf(pf2,"%d %lf %lf\n",part[i].id, part[i].pos[0], part[i].pos[1]);
+      }*/
 
   
   
@@ -249,7 +253,8 @@ int main(int argc, char **argv)
     
   for(i=0; i<Nparticles; i++)
     {
-      dist[i] = distancia(1500, part[i].pos[0], 1500, part[i].pos[1]);
+      //dist[i] = distancia(1500, part[i].pos[0], 1500, part[i].pos[1]);
+      dist[i] = distancia(0, part[i].pos[0], 0, part[i].pos[1]);
     }
   
   gsl_sort_smallest_index (p, k, dist, 1,Nparticles);//Se ordenan las particulas en forma creciente
@@ -300,7 +305,7 @@ int main(int argc, char **argv)
   printf("MIN VALUE OF DIST %.9lf\n",distmin);
   printf("MAX VALUE OF DIST: %.9lf\n",distmax);
 
-  free(dist); 
+   
 
   
   /*Calculamos las distancias de los baricentros de cada triangulo al centro (0,0)*/
@@ -353,6 +358,10 @@ int main(int argc, char **argv)
   Nbins = 1*sqrt(Nparticles);  
   dr = part_bines * ( log(Rmax)-log(Rmin) )/Nbins;
 
+  r_medio  = (double *) malloc(Nbins *sizeof(double));
+
+  drho  = (double *) malloc(Nbins *sizeof(double));
+
   pf8 = fopen("densidad_distancia.dat","w");
   
   for(l=0; l<Nbins; l++)
@@ -363,7 +372,7 @@ int main(int argc, char **argv)
       ri_exp = exp(ri);
       re_exp = exp(re);
 
-      r_medio = (re_exp - ri_exp)*0.5;
+      r_medio[l] = (re_exp - ri_exp)*0.5;
 
       dSi = (2*PI*ri_exp); 
       dSe = (2*PI*re_exp);
@@ -382,17 +391,24 @@ int main(int argc, char **argv)
 	}
       
 
-      dS = dM/dS;
+      drho[l] = dM/dS;
 
-      fprintf(pf8,"%e %e\n",r_medio, dS);
+      fprintf(pf8,"%e %e\n",r_medio[l], drho[l]);
 
     }
   
+  /*Calculo de la Masa Integrada*/
+
+  simpson(r_medio, drho, Nbins);
+
+  /*Identificacion del radio al cual la densidad decae por debajo de e*/
+
+  decae_densidad();
   
   /* Imprimir resultados y salir */
   
-
-  fclose(pf2);
+ 
+  //fclose(pf2);
   fclose(pf4);
   fclose(pf5);
   fclose(pf6);

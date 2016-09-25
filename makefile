@@ -11,10 +11,18 @@ distancia:distancia.h
 	echo Estoy compilando $@.c
 	$(CC) $(CFLAGS) $@.c -o $@.o
 
+simpson:simpson.h
+	echo Estoy compilando $@.c
+	$(CC) $(CFLAGS) $@.c -o $@.o
+
+decae_densidad:decae_densidad.h
+	echo Estoy compilando $@.c
+	$(CC) $(CFLAGS) $@.c -o $@.o
+
 vecinos:
 	echo Estoy compilando $@.c
 	$(CC) $(CFLAGS) $@.c -o $@.o
-	$(CC) distancia.o $@.o $(LFLAGS) -lm -lgsl -lgslcblas -o  $@.x		
+	$(CC) distancia.o simpson.o decae_densidad.o $@.o $(LFLAGS) -lm -lgsl -lgslcblas -o  $@.x		
 
 debug: 
 	echo Estoy compilando para debugear $@.c
