@@ -15,14 +15,18 @@ simpson:simpson.h
 	echo Estoy compilando $@.c
 	$(CC) $(CFLAGS) $@.c -o $@.o
 
+interpolador:interpolador.h
+	echo Estoy compilando $@.c
+	$(CC) $(CFLAGS) $@.c -o $@.o
+
 decae_densidad:decae_densidad.h
 	echo Estoy compilando $@.c
 	$(CC) $(CFLAGS) $@.c -o $@.o
 
-vecinos:
+programa_main:
 	echo Estoy compilando $@.c
 	$(CC) $(CFLAGS) $@.c -o $@.o
-	$(CC) distancia.o simpson.o decae_densidad.o $@.o $(LFLAGS) -lm -lgsl -lgslcblas -o  $@.x		
+	$(CC) distancia.o interpolador.o simpson.o decae_densidad.o $@.o $(LFLAGS) -lm -lgsl -lgslcblas -o  $@.x		
 
 debug: 
 	echo Estoy compilando para debugear $@.c

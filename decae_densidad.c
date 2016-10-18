@@ -1,3 +1,13 @@
+/*Xibelly Eliseth Mosquera Escobar
+ * 
+ * programa: decae_densidad.c
+ * 
+ * Este programa lee los datos obtenidos al hacer la interpolacion y busca para que valor     
+ *  del radio donde la densidad a 
+ * empezado a decaer en un fator de e.
+ */
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -13,6 +23,7 @@ int decae_densidad()
   double e, a;
   double *radio, *densidad;
   double *ri, *iter;
+  double r_e;	
 
   FILE *pf1 = NULL;
   FILE *entrada =NULL;
@@ -42,8 +53,6 @@ int decae_densidad()
    
   iter  = (double *) malloc(num_lineas *sizeof(double));
 
-  densidad = (double *) malloc(num_lineas *sizeof(double));
-
   radio = (double *) malloc(num_lineas *sizeof(double));
   
   
@@ -63,13 +72,15 @@ int decae_densidad()
       
       if(a < e)
 	{
-	  densidad[i] = a;
 	  
+	  r_e = ri[i];
+	  printf("RADIUS WHERE DECREASE THE DENSITY IS: %lf\n",r_e);
+	  break;
 	}
     }
-  //gsl_sort_smallest_index (p, k, densidad, 1, num_lineas);//ordenamos dichos valores en forma creciente
   
-  printf("RADIUS WHERE DECREASE THE DENSITY IS: %lf\n",ri[0]);
+  
+  
 
 
 

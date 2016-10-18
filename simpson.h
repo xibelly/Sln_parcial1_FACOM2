@@ -1,1 +1,1 @@
-int simpson(double *r_medio, double *drho, int Nbins);
+int simpson(double a, double b);
